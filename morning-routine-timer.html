@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>朝のルーティン</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+
+  :root {
+    --bg: #0d1b2a;
+    --bg2: #112233;
+    --surface: #1a2e44;
+    --orange: #f4831f;
+    --amber: #fbb03b;
+    --warn: #e8455a;
+    --white: #f0f4f8;
+    --muted: #6a8ba8;
+    --done: #3db87e;
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  /* ===== HEADER ===== */
+  .header {
+    width: 100%;
+    max-width: 480px;
+    padding: 24px 24px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .header-title {
+    font-size: 13px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .total-time {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ===== MAIN DISPLAY ===== */
+  .main-display {
+    width: 100%;
+    max-width: 480px;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+  }
+
+  /* ===== RING ===== */
+  .ring-wrap {
+    position: relative;
+    width: 240px;
+    height: 240px;
+    margin: 32px auto 24px;
+  }
+  .ring-svg {
+    width: 240px;
+    height: 240px;
+    transform: rotate(-90deg);
+  }
+  .ring-track {
+    fill: none;
+    stroke: var(--surface);
+    stroke-width: 14;
+  }
+  .ring-progress {
+    fill: none;
+    stroke-width: 14;
+    stroke-linecap: round;
+    stroke-dasharray: 659.7; /* 2π × 105 */
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 0.5s linear, stroke 0.4s;
+  }
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .ring-time {
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+    font-size: 52px;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    transition: color 0.4s;
+  }
+  .ring-label {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* ===== STEP INFO ===== */
+  .step-info {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .step-num {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    margin-bottom: 6px;
+  }
+  .step-name {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+    transition: color 0.4s;
+  }
+  .step-emoji {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+  }
+  .step-duration {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ===== PULSE WARN ===== */
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  .warn-active .ring-progress {
+    animation: pulse-ring 0.8s ease-in-out infinite;
+  }
+  .warn-active .ring-time {
+    color: var(--warn);
+  }
+  .warn-active .step-name {
+    color: var(--warn);
+  }
+
+  /* ===== CONTROLS ===== */
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .btn {
+    border: none;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    border-radius: 50px;
+    transition: transform 0.12s, opacity 0.2s;
+    outline: none;
+  }
+  .btn:active { transform: scale(0.94); }
+
+  .btn-start {
+    background: linear-gradient(135deg, var(--orange), var(--amber));
+    color: #fff;
+    font-size: 16px;
+    padding: 16px 52px;
+    box-shadow: 0 4px 24px rgba(244,131,31,0.35);
+  }
+  .btn-pause {
+    background: var(--surface);
+    color: var(--white);
+    font-size: 15px;
+    padding: 14px 28px;
+  }
+  .btn-reset {
+    background: transparent;
+    border: 1.5px solid var(--surface);
+    color: var(--muted);
+    font-size: 14px;
+    padding: 14px 22px;
+  }
+
+  /* ===== STEP LIST ===== */
+  .step-list {
+    width: 100%;
+    max-width: 480px;
+    padding: 0 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .step-item {
+    background: var(--bg2);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1.5px solid transparent;
+    transition: border-color 0.3s, background 0.3s, opacity 0.3s;
+    opacity: 0.55;
+  }
+  .step-item.active {
+    border-color: var(--orange);
+    background: var(--surface);
+    opacity: 1;
+  }
+  .step-item.done {
+    opacity: 0.4;
+  }
+  .step-item.done .item-name {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+
+  /* mini ring */
+  .mini-ring-wrap {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    position: relative;
+  }
+  .mini-svg {
+    width: 44px;
+    height: 44px;
+    transform: rotate(-90deg);
+  }
+  .mini-track { fill: none; stroke: var(--bg); stroke-width: 4; }
+  .mini-progress {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 113.1; /* 2π × 18 */
+    stroke-dashoffset: 113.1;
+    transition: stroke-dashoffset 0.5s linear, stroke 0.4s;
+  }
+  .mini-emoji {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .item-text { flex: 1; min-width: 0; }
+  .item-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 2px;
+    transition: color 0.3s;
+  }
+  .item-dur {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .item-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+    background: transparent;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .done .item-check {
+    background: var(--done);
+    border-color: var(--done);
+  }
+
+  /* ===== COMPLETE OVERLAY ===== */
+  .complete-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(13,27,42,0.97);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 100;
+  }
+  .complete-overlay.show { display: flex; }
+  .complete-emoji { font-size: 64px; }
+  .complete-title { font-size: 28px; font-weight: 700; }
+  .complete-sub { font-size: 14px; color: var(--muted); }
+  .btn-again {
+    margin-top: 12px;
+    background: linear-gradient(135deg, var(--orange), var(--amber));
+    color: #fff;
+    font-size: 16px;
+    padding: 16px 44px;
+    border-radius: 50px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">Morning Routine</div>
+  </div>
+  <div class="total-time" id="totalRemain">60:00</div>
+</div>
+
+<div class="main-display">
+  <div class="ring-wrap" id="ringWrap">
+    <svg class="ring-svg" viewBox="0 0 240 240">
+      <circle class="ring-track" cx="120" cy="120" r="105"/>
+      <circle class="ring-progress" id="ringProgress" cx="120" cy="120" r="105" stroke="var(--orange)"/>
+    </svg>
+    <div class="ring-center">
+      <span class="ring-time" id="ringTime">10:00</span>
+      <span class="ring-label">残り時間</span>
+    </div>
+  </div>
+
+  <div class="step-info">
+    <div class="step-num" id="stepNum">STEP 1 / 7</div>
+    <span class="step-emoji" id="stepEmoji">🚽</span>
+    <div class="step-name" id="stepName">トイレ</div>
+    <div class="step-duration" id="stepDuration">10分</div>
+  </div>
+
+  <div class="controls" id="controls">
+    <button class="btn btn-start" id="btnStart" onclick="startTimer()">スタート</button>
+  </div>
+</div>
+
+<div class="step-list" id="stepList"></div>
+
+<div class="complete-overlay" id="completeOverlay">
+  <div class="complete-emoji">☀️</div>
+  <div class="complete-title">準備完了！</div>
+  <div class="complete-sub">60分のルーティンをこなしました</div>
+  <button class="btn-again" onclick="resetTimer()">もう一度</button>
+</div>
+
+<script>
+const STEPS = [
+  { name: 'トイレ',              emoji: '🚽', dur: 10, color: '#6b9fd4' },
+  { name: '朝食準備',            emoji: '🍳', dur: 5,  color: '#f4831f' },
+  { name: 'オーブン電源',        emoji: '🔴', dur: 3,  color: '#e8455a' },
+  { name: '食事',                emoji: '🥪', dur: 25, color: '#fbb03b' },
+  { name: '歯磨き',              emoji: '🦷', dur: 3,  color: '#3db87e' },
+  { name: '髭剃り・洗顔・ケア', emoji: '🪥', dur: 12, color: '#a076f9' },
+  { name: 'ロスタイム',          emoji: '⏱️', dur: 2,  color: '#6a8ba8' },
+];
+
+const CIRC_LARGE  = 2 * Math.PI * 105; // 659.73
+const CIRC_MINI   = 2 * Math.PI * 18;  // 113.10
+
+let currentStep = 0;
+let secondsLeft  = STEPS[0].dur * 60;
+let totalLeft    = STEPS.reduce((a,s) => a + s.dur, 0) * 60;
+let intervalId   = null;
+let running      = false;
+
+// ===== BUILD STEP LIST =====
+function buildList() {
+  const list = document.getElementById('stepList');
+  list.innerHTML = '';
+  STEPS.forEach((s, i) => {
+    const item = document.createElement('div');
+    item.className = 'step-item' + (i === 0 ? ' active' : '');
+    item.id = `item-${i}`;
+    item.innerHTML = `
+      <div class="mini-ring-wrap">
+        <svg class="mini-svg" viewBox="0 0 44 44">
+          <circle class="mini-track" cx="22" cy="22" r="18"/>
+          <circle class="mini-progress" id="mini-${i}" cx="22" cy="22" r="18"
+            stroke="${s.color}" stroke-dashoffset="${CIRC_MINI}"/>
+        </svg>
+        <div class="mini-emoji">${s.emoji}</div>
+      </div>
+      <div class="item-text">
+        <div class="item-name">${s.name}</div>
+        <div class="item-dur">${s.dur}分</div>
+      </div>
+      <div class="item-check" id="check-${i}">✓</div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+// ===== UPDATE UI =====
+function updateMainRing() {
+  const s      = STEPS[currentStep];
+  const total  = s.dur * 60;
+  const ratio  = secondsLeft / total;
+  const offset = CIRC_LARGE * (1 - ratio);
+
+  const ring = document.getElementById('ringProgress');
+  ring.style.strokeDashoffset = offset;
+  ring.style.stroke = s.color;
+
+  const mins = String(Math.floor(secondsLeft / 60)).padStart(2,'0');
+  const secs = String(secondsLeft % 60).padStart(2,'0');
+  document.getElementById('ringTime').textContent = `${mins}:${secs}`;
+
+  // warn last 60s
+  const warn = secondsLeft <= 60 && running;
+  document.getElementById('ringWrap').classList.toggle('warn-active', warn);
+  if (warn) ring.style.stroke = 'var(--warn)';
+}
+
+function updateMiniRing(idx, secsLeft) {
+  const total = STEPS[idx].dur * 60;
+  const ratio = secsLeft / total;
+  const offset = CIRC_MINI * (1 - ratio);
+  const el = document.getElementById(`mini-${idx}`);
+  if (el) el.style.strokeDashoffset = offset;
+}
+
+function updateStepInfo() {
+  const s = STEPS[currentStep];
+  document.getElementById('stepNum').textContent  = `STEP ${currentStep+1} / ${STEPS.length}`;
+  document.getElementById('stepEmoji').textContent = s.emoji;
+  document.getElementById('stepName').textContent  = s.name;
+  document.getElementById('stepDuration').textContent = `${s.dur}分`;
+}
+
+function updateTotalRemain() {
+  const m = String(Math.floor(totalLeft / 60)).padStart(2,'0');
+  const s = String(totalLeft % 60).padStart(2,'0');
+  document.getElementById('totalRemain').textContent = `${m}:${s}`;
+}
+
+function markDone(idx) {
+  const item = document.getElementById(`item-${idx}`);
+  if (item) {
+    item.classList.remove('active');
+    item.classList.add('done');
+  }
+  // fill mini ring fully
+  const mini = document.getElementById(`mini-${idx}`);
+  if (mini) mini.style.strokeDashoffset = '0';
+}
+
+function activateStep(idx) {
+  // deactivate previous
+  STEPS.forEach((_, i) => {
+    const el = document.getElementById(`item-${i}`);
+    if (el) el.classList.remove('active');
+  });
+  const el = document.getElementById(`item-${idx}`);
+  if (el) {
+    el.classList.add('active');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// ===== TIMER LOGIC =====
+function tick() {
+  secondsLeft--;
+  totalLeft--;
+  updateTotalRemain();
+  updateMainRing();
+  updateMiniRing(currentStep, secondsLeft);
+
+  if (secondsLeft <= 0) {
+    markDone(currentStep);
+    currentStep++;
+    if (currentStep >= STEPS.length) {
+      clearInterval(intervalId);
+      running = false;
+      setTimeout(() => document.getElementById('completeOverlay').classList.add('show'), 400);
+      return;
+    }
+    secondsLeft = STEPS[currentStep].dur * 60;
+    activateStep(currentStep);
+    updateStepInfo();
+    updateMainRing();
+  }
+}
+
+function startTimer() {
+  if (running) return;
+  running = true;
+  const btn = document.getElementById('btnStart');
+  btn.textContent = '一時停止';
+  btn.onclick = pauseTimer;
+  intervalId = setInterval(tick, 1000);
+}
+
+function pauseTimer() {
+  clearInterval(intervalId);
+  running = false;
+  const btn = document.getElementById('btnStart');
+  btn.textContent = '再開';
+  btn.onclick = resumeTimer;
+}
+
+function resumeTimer() {
+  running = true;
+  const btn = document.getElementById('btnStart');
+  btn.textContent = '一時停止';
+  btn.onclick = pauseTimer;
+  intervalId = setInterval(tick, 1000);
+}
+
+function resetTimer() {
+  clearInterval(intervalId);
+  running = false;
+  currentStep = 0;
+  secondsLeft = STEPS[0].dur * 60;
+  totalLeft   = STEPS.reduce((a,s) => a + s.dur, 0) * 60;
+  document.getElementById('completeOverlay').classList.remove('show');
+  buildList();
+  updateStepInfo();
+  updateMainRing();
+  updateTotalRemain();
+  const btn = document.getElementById('btnStart');
+  btn.textContent = 'スタート';
+  btn.onclick = startTimer;
+}
+
+// init
+buildList();
+updateStepInfo();
+updateMainRing();
+updateTotalRemain();
+</script>
+</body>
+</html>
